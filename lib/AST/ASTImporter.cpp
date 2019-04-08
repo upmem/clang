@@ -2500,7 +2500,7 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
     }
 
     if (!ConflictingDecls.empty()) {
-      Name = Importer.HandleNameConflict(Name, DC, IDNS,
+      Name = Importer.HandleNameConflict(SearchName, DC, IDNS,
                                          ConflictingDecls.data(),
                                          ConflictingDecls.size());
       if (!Name)
