@@ -37,6 +37,7 @@
 #include "ToolChains/NetBSD.h"
 #include "ToolChains/OpenBSD.h"
 #include "ToolChains/PS4CPU.h"
+#include "ToolChains/DPURTE.h"
 #include "ToolChains/RISCV.h"
 #include "ToolChains/Solaris.h"
 #include "ToolChains/TCE.h"
@@ -4370,6 +4371,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
       break;
     case llvm::Triple::PS4:
       TC = llvm::make_unique<toolchains::PS4CPU>(*this, Target, Args);
+      break;
+    case llvm::Triple::DPURTe:
+      TC = llvm::make_unique<toolchains::DPURTE>(*this, Target, Args);
       break;
     case llvm::Triple::Contiki:
       TC = llvm::make_unique<toolchains::Contiki>(*this, Target, Args);
