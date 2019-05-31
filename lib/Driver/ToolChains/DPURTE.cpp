@@ -52,7 +52,7 @@ char *DPURTE::GetUpmemSdkPath(const char *Path) {
 
 Tool *DPURTE::buildLinker() const {
   return new tools::dpu::Linker(*this, PathToLinkScript, PathToRtLibDirectory,
-                                PathToRtLibBc);
+                                PathToRtLibBc, PathToStartFile);
 }
 
 void DPURTE::addClangTargetOptions(
@@ -96,6 +96,10 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!HasArgScript) {
     CmdArgs.push_back("-T");
     CmdArgs.push_back(LinkScript);
+  }
+
+  if (!TCArgs.hasArg(options::OPT_nostartfiles)) {
+        CmdArgs.push_back(StartFile);
   }
 
   CmdArgs.push_back("-gc-sections");
