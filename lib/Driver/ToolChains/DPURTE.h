@@ -27,10 +27,10 @@ public:
       : Generic_ELF(D, Triple, Args) {
     PathToStdlibIncludes = GetUpmemSdkPath("/usr/share/upmem/include/stdlib");
     PathToSyslibIncludes = GetUpmemSdkPath("/usr/share/upmem/include/syslib");
-    PathToLinkScript =
-        Args.hasArg(options::OPT_nostartfiles)
-            ? GetUpmemSdkPath("/usr/share/upmem/include/link/dpu.lds")
-            : GetUpmemSdkPath("/usr/share/upmem/include/link/dyn_dpu.lds");
+    PathToStaticLinkScript =
+        GetUpmemSdkPath("/usr/share/upmem/include/link/dpu.lds");
+    PathToDynamicLinkScript =
+        GetUpmemSdkPath("/usr/share/upmem/include/link/dyn_dpu.lds");
     PathToRtLibDirectory =
         Args.hasArg(options::OPT_pg)
             ? GetUpmemSdkPath("/usr/share/upmem/include/built-in-profiling")
@@ -40,13 +40,15 @@ public:
             ? GetUpmemSdkPath(
                   "/usr/share/upmem/include/built-in-profiling/rtlib.bc")
             : GetUpmemSdkPath("/usr/share/upmem/include/built-in/rtlib.bc");
-    PathToStartFile = GetUpmemSdkPath("/usr/share/upmem/include/built-in/dpu_sys_mram_loader.o");
+    PathToStartFile = GetUpmemSdkPath(
+        "/usr/share/upmem/include/built-in/dpu_sys_mram_loader.o");
   }
 
   ~DPURTE() override {
     free(PathToStdlibIncludes);
     free(PathToSyslibIncludes);
-    free(PathToLinkScript);
+    free(PathToStaticLinkScript);
+    free(PathToDynamicLinkScript);
     free(PathToRtLibDirectory);
     free(PathToRtLibBc);
     free(PathToStartFile);
@@ -80,7 +82,8 @@ private:
   char *PathToSDK = NULL;
   char *PathToSyslibIncludes;
   char *PathToStdlibIncludes;
-  char *PathToLinkScript;
+  char *PathToStaticLinkScript;
+  char *PathToDynamicLinkScript;
   char *PathToRtLibDirectory;
   char *PathToRtLibBc;
   char *PathToStartFile;
@@ -90,10 +93,12 @@ namespace tools {
 namespace dpu {
 class LLVM_LIBRARY_VISIBILITY Linker : public GnuTool {
 public:
-  Linker(const ToolChain &TC, const char *Script, const char *RtLibDir,
+  Linker(const ToolChain &TC, const char *StaticScript,
+         const char *DynamicScript, const char *RtLibDir,
          const char *PathToRtLibBc, const char *PathToStartFile)
       : GnuTool("dpu::Linker", "ld.lld", TC) {
-    LinkScript = Script;
+    StaticLinkScript = StaticScript;
+    DynamicLinkScript = DynamicScript;
     RtLibraryPath = RtLibDir;
     RtBcLibrary = PathToRtLibBc;
     StartFile = PathToStartFile;
@@ -109,7 +114,8 @@ public:
                     const char *LinkingOutput) const override;
 
 private:
-  const char *LinkScript;
+  const char *StaticLinkScript;
+  const char *DynamicLinkScript;
   const char *RtLibraryPath;
   const char *RtBcLibrary;
   const char *StartFile;

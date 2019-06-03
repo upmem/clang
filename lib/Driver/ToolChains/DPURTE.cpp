@@ -10,11 +10,11 @@
 #include "DPURTE.h"
 #include "CommonArgs.h"
 #include "InputInfo.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "clang/Basic/VirtualFileSystem.h"
 
 using namespace llvm::opt;
 
@@ -51,7 +51,8 @@ char *DPURTE::GetUpmemSdkPath(const char *Path) {
 }
 
 Tool *DPURTE::buildLinker() const {
-  return new tools::dpu::Linker(*this, PathToLinkScript, PathToRtLibDirectory,
+  return new tools::dpu::Linker(*this, PathToStaticLinkScript,
+                                PathToDynamicLinkScript, PathToRtLibDirectory,
                                 PathToRtLibBc, PathToStartFile);
 }
 
@@ -93,13 +94,28 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
       break;
     }
   }
-  if (!HasArgScript) {
-    CmdArgs.push_back("-T");
-    CmdArgs.push_back(LinkScript);
+
+  bool HasNoDynamicLinkerArg = false;
+  for (unsigned int EachArg = 0; EachArg < CmdArgs.size(); EachArg++) {
+    if (CmdArgs[EachArg][0] == '-' &&
+        !strncmp("--no-dynamic-linker", CmdArgs[EachArg], 19)) {
+      HasNoDynamicLinkerArg = true;
+      break;
+    }
   }
 
-  if (!TCArgs.hasArg(options::OPT_nostartfiles)) {
-        CmdArgs.push_back(StartFile);
+  if (!HasArgScript) {
+    CmdArgs.push_back("-T");
+
+    if (!HasNoDynamicLinkerArg) {
+      CmdArgs.push_back(DynamicLinkScript);
+    } else {
+      CmdArgs.push_back(StaticLinkScript);
+    }
+  }
+
+  if (!HasNoDynamicLinkerArg) {
+    CmdArgs.push_back(StartFile);
   }
 
   CmdArgs.push_back("-gc-sections");
