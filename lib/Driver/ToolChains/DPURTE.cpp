@@ -51,8 +51,7 @@ char *DPURTE::GetUpmemSdkPath(const char *Path) {
 }
 
 Tool *DPURTE::buildLinker() const {
-  return new tools::dpu::Linker(*this, PathToStaticLinkScript,
-                                PathToDynamicLinkScript, PathToRtLibDirectory,
+  return new tools::dpu::Linker(*this, PathToLinkScript, PathToRtLibDirectory,
                                 PathToRtLibBc, PathToStartFile);
 }
 
@@ -106,15 +105,11 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!HasArgScript) {
     CmdArgs.push_back("-T");
-
-    if (!HasNoDynamicLinkerArg) {
-      CmdArgs.push_back(DynamicLinkScript);
-    } else {
-      CmdArgs.push_back(StaticLinkScript);
-    }
+    CmdArgs.push_back(LinkScript);
   }
 
   if (!HasNoDynamicLinkerArg) {
+    CmdArgs.push_back("-e__loader_bootstrap");
     CmdArgs.push_back(StartFile);
   }
 
