@@ -94,11 +94,11 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  bool HasNoDynamicLinkerArg = false;
+  bool HasDynamicLinkerArg = false;
   for (unsigned int EachArg = 0; EachArg < CmdArgs.size(); EachArg++) {
     if (CmdArgs[EachArg][0] == '-' &&
-        !strncmp("--no-dynamic-linker", CmdArgs[EachArg], 19)) {
-      HasNoDynamicLinkerArg = true;
+        !strncmp("--dynamic-linker", CmdArgs[EachArg], 19)) {
+        HasDynamicLinkerArg = true;
       break;
     }
   }
@@ -108,7 +108,7 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(LinkScript);
   }
 
-  if (!HasNoDynamicLinkerArg) {
+  if (HasDynamicLinkerArg) {
     CmdArgs.push_back("-e__loader_bootstrap");
     CmdArgs.push_back(StartFile);
   }
