@@ -97,7 +97,7 @@ void Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool HasDynamicLinkerArg = false;
   for (unsigned int EachArg = 0; EachArg < CmdArgs.size(); EachArg++) {
     if (CmdArgs[EachArg][0] == '-' &&
-        !strncmp("--dynamic-linker", CmdArgs[EachArg], 19)) {
+        !strncmp("--dynamic-linker", CmdArgs[EachArg], 16)) {
         HasDynamicLinkerArg = true;
       break;
     }
