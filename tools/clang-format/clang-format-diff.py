@@ -28,6 +28,7 @@ import difflib
 import re
 import subprocess
 import sys
+import tempfile
 
 if sys.version_info.major >= 3:
     from io import StringIO
@@ -65,11 +66,24 @@ def main():
 
   # Extract changed lines for each file.
   filename = None
+  tmpfile = None
   lines_by_file = {}
   for line in sys.stdin:
     match = re.search('^\+\+\+\ (.*?/){%s}(\S*)' % args.p, line)
     if match:
+      # Do not use the local file but the version of the file that
+      # is committed in HEAD.
       filename = match.group(2)
+      command = ("git show HEAD:" + filename).split(" ")
+      p = subprocess.Popen(command,
+                         stdout=subprocess.PIPE,
+                         stderr=None,
+                         stdin=subprocess.PIPE,
+                         universal_newlines=True)
+      stdout, stderr = p.communicate()
+      tmpfile = tempfile.NamedTemporaryFile()
+      tmpfile.write(stdout)
+      tmpfile.flush()
     if filename == None:
       continue
 
@@ -89,14 +103,17 @@ def main():
       if line_count == 0:
         continue
       end_line = start_line + line_count - 1
-      lines_by_file.setdefault(filename, []).extend(
+      lines_by_file.setdefault((filename, tmpfile), []).extend(
           ['-lines', str(start_line) + ':' + str(end_line)])
 
   # Reformat files containing changes in place.
-  for filename, lines in lines_by_file.items():
+  for filename_dir, lines in lines_by_file.items():
+    filename = filename_dir[0]
+    tmpfile = filename_dir[1]
+
     if args.i and args.verbose:
       print('Formatting {}'.format(filename))
-    command = [args.binary, filename]
+    command = [args.binary, tmpfile.name]
     if args.i:
       command.append('-i')
     if args.sort_includes:
@@ -104,6 +121,7 @@ def main():
     command.extend(lines)
     if args.style:
       command.extend(['-style', args.style])
+
     p = subprocess.Popen(command,
                          stdout=subprocess.PIPE,
                          stderr=None,
@@ -114,15 +132,17 @@ def main():
       sys.exit(p.returncode)
 
     if not args.i:
-      with open(filename) as f:
-        code = f.readlines()
+      tmpfile.seek(0)
+      code = tmpfile.readlines()
       formatted_code = StringIO(stdout).readlines()
       diff = difflib.unified_diff(code, formatted_code,
-                                  filename, filename,
+                                  filename, tmpfile.name,
                                   '(before formatting)', '(after formatting)')
       diff_string = ''.join(diff)
       if len(diff_string) > 0:
         sys.stdout.write(diff_string)
+
+      tmpfile.close()
 
 if __name__ == '__main__':
   main()
