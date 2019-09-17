@@ -62,27 +62,31 @@ def main():
                       'Mozilla, WebKit)')
   parser.add_argument('-binary', default='clang-format',
                       help='location of binary to use for clang-format')
+  parser.add_argument('-revision', default='HEAD',
+                      help='revision of the versioned files')
   args = parser.parse_args()
 
   # Extract changed lines for each file.
   filename = None
   tmpfile = None
   lines_by_file = {}
+  # Checkout the .clang-format of the current repo
+  if (args.style == "file"):
+    command = ("git show {}:.clang-format".format(args.revision)).split(" ")
+    with open("/tmp/.clang-format", "w") as f:
+      subprocess.Popen(command, stdout = f)
+
   for line in sys.stdin:
     match = re.search('^\+\+\+\ (.*?/){%s}(\S*)' % args.p, line)
     if match:
       # Do not use the local file but the version of the file that
-      # is committed in HEAD.
+      # is committed in args.revision.
       filename = match.group(2)
-      command = ("git show HEAD:" + filename).split(" ")
-      p = subprocess.Popen(command,
-                         stdout=subprocess.PIPE,
-                         stderr=None,
-                         stdin=subprocess.PIPE,
-                         universal_newlines=True)
-      stdout, stderr = p.communicate()
-      tmpfile = tempfile.NamedTemporaryFile()
-      tmpfile.write(stdout)
+      extension = filename.split(".")[-1]
+      command = ("git show {}:".format(args.revision) + filename).split(" ")
+      tmpfile = tempfile.NamedTemporaryFile(suffix = ".{}".format(extension))
+      filecontent = subprocess.check_output(command, universal_newlines = True)
+      tmpfile.write(filecontent)
       tmpfile.flush()
     if filename == None:
       continue
@@ -103,13 +107,14 @@ def main():
       if line_count == 0:
         continue
       end_line = start_line + line_count - 1
-      lines_by_file.setdefault((filename, tmpfile), []).extend(
+      lines_by_file.setdefault((filename, tmpfile, filecontent), []).extend(
           ['-lines', str(start_line) + ':' + str(end_line)])
 
   # Reformat files containing changes in place.
-  for filename_dir, lines in lines_by_file.items():
-    filename = filename_dir[0]
-    tmpfile = filename_dir[1]
+  for file_tuple, lines in lines_by_file.items():
+    filename = file_tuple[0]
+    tmpfile = file_tuple[1]
+    code = file_tuple[2].splitlines(True)
 
     if args.i and args.verbose:
       print('Formatting {}'.format(filename))
@@ -132,8 +137,6 @@ def main():
       sys.exit(p.returncode)
 
     if not args.i:
-      tmpfile.seek(0)
-      code = tmpfile.readlines()
       formatted_code = StringIO(stdout).readlines()
       diff = difflib.unified_diff(code, formatted_code,
                                   filename, tmpfile.name,
