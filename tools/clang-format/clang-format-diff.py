@@ -139,7 +139,7 @@ def main():
     if not args.i:
       formatted_code = StringIO(stdout).readlines()
       diff = difflib.unified_diff(code, formatted_code,
-                                  filename, tmpfile.name,
+                                  filename, filename,
                                   '(before formatting)', '(after formatting)')
       diff_string = ''.join(diff)
       if len(diff_string) > 0:
